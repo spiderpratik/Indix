@@ -183,7 +183,7 @@ assert(multiplesThreeFive( 10 ) == 33 )
 assert(multiplesThreeFive( 20 ) == 98 )
 assert(multiplesThreeFive( 30 ) == 225 )
 
-//assert( numberOfPaths ( 10, 10 ) == 184756)
+assert( numberOfPaths ( 10, 10 ) == 184756)
 assert( numberOfPaths ( 5, 5 ) == 252)
 assert( numberOfPaths ( 2, 2 ) == 6)
 assert( numberOfPaths ( 3, 3 ) == 20)
