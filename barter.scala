@@ -32,32 +32,37 @@ class barter {
     }
   }
 
-  def addEntryGraph(matrix: Array[fraction], v1: fraction, n1: Int, v2: fraction, n2: Int): Array[fraction] = {
-    matrix(n1*100+n2) = v1.divide(v2)
-    matrix(n2*100+n1) = v1.divide(v2)
+  val DIMENSION = 100 // maximum dimension of the 2D square matrix that represents the graph
+                                          // This 2D matrix is implemented using 1D Array
+  val INVALID = new fraction(-10, 1)
+
+  def addNode(matrix: Array[fraction], f1: fraction, n1: Int, f2: fraction, n2: Int): Array[fraction] = {
+    matrix(n1*DIMENSION+n2) = f1.divide(f2)
+    matrix(n2*DIMENSION+n1) = f2.divide(f1)
     matrix
   }
-  def dfs(from: Int, to: Int, visited: List[Int],matrix: Array[fraction], curr_frac: fraction): fraction={
-    val _visited: List[Int] = visited:::List(from)
+
+  def graphDFS(from: Int, to: Int, oldVisited: List[Int],matrix: Array[fraction], curr_frac: fraction): fraction = {
+    val visited: List[Int] = oldVisited:::List(from)
     (from, to) match{
-      case (_,_) if matrix(from*100+to) != null =>
-        curr_frac.multiply(matrix(from * 100 + to))
+      case (_,_) if matrix(from*DIMENSION+to) != null =>
+        curr_frac.multiply(matrix(from * DIMENSION + to))
       case (_,_) =>
-        for(i <- from*100 to from*100 +100) {
-          if (matrix(i) != null && _visited.find(x => x == i%100).isEmpty){
-            return dfs(i%100, to, _visited, matrix, curr_frac.multiply(matrix(i)))
+        for(i <- from*DIMENSION to (from+1)*DIMENSION) {
+          if (matrix(i) != null && visited.find(x => x == i%DIMENSION).isEmpty) {
+            return graphDFS(i%DIMENSION, to, visited, matrix, curr_frac.multiply(matrix(i)))
           }
         }
-        new fraction(-10,1)
+       INVALID
     }
   }
-  def normalMap(input:List[String]):Map[String,Int] ={
+  def itemMapIndex(input:List[String]):Map[String,Int] ={
     val output = mainFunction(input).distinct
     val listindex =1 to output.length
     (output zip listindex).toMap
   }
 
-  def reverseMap(input:List[String]):Map[Int,String] ={
+  def indexMapItem(input:List[String]):Map[Int,String] ={
     val output = mainFunction(input).distinct
     val listindex =1 to output.length
     (listindex zip output ).toMap
@@ -74,7 +79,7 @@ class barter {
           List("")
       case a::b =>
         val tmp = a.split(" ")
-        if(tmp(0) == "!"){
+        if(tmp(0) == "!") {
           List(tmp(2),tmp(5)) ++ mainFunction(b)
         }
         else
@@ -124,33 +129,23 @@ class barter {
     var matrix: Array[fraction] = new Array[fraction](12000)
     var finalStr = ""
 
-    val mapOfitemsToIndex = normalMap(inputList)
-    val mapOfIndexToItems = reverseMap(inputList)
+    val mapOfitemsToIndex = itemMapIndex(inputList)
+    val mapOfIndexToItems = indexMapItem(inputList)
     val informationList = generateList(inputList)
     val QuestionList = generateQuestionList(inputList)
     for(i <- 1 to informationList.length)
-      matrix = addEntryGraph(matrix, new fraction(informationList(i-1)(0).toInt ,1), mapOfitemsToIndex(informationList(i-1)(1)),new fraction(informationList(i-1)(2).toInt,1), mapOfitemsToIndex(informationList(i-1)(3)))
+      matrix = addNode(matrix, new fraction(informationList(i-1)(0).toInt ,1), mapOfitemsToIndex(informationList(i-1)(1)),new fraction(informationList(i-1)(2).toInt,1), mapOfitemsToIndex(informationList(i-1)(3)))
 
     for( i <- 0 to QuestionList.length-1) {
       val from = mapOfitemsToIndex(QuestionList(i)(0))
       val to = mapOfitemsToIndex(QuestionList(i)(1))
       val visited = List[Int]()
-      val final_frac_not_simplified = dfs(from, to, visited, matrix, new fraction(1, 1))
+      val final_frac_not_simplified = graphDFS(from, to, visited, matrix, new fraction(1, 1))
       val final_frac = final_frac_not_simplified.simplify()
       if(final_frac.num > 0)
-       /* println*/finalStr = finalStr + final_frac.den + " " + mapOfIndexToItems(from) + " = " + final_frac.num + " " + mapOfIndexToItems(to)
-      else
-       /* println*/finalStr = finalStr + "? " + mapOfIndexToItems(from) + " = ? " + mapOfIndexToItems(to)
+       finalStr  = finalStr + "__" + (final_frac.num + " " + mapOfIndexToItems(from) + " = " + final_frac.den + " " + mapOfIndexToItems(to))
+      else finalStr = finalStr + "__" + ("? " + mapOfIndexToItems(from) + " = ? " + mapOfIndexToItems(to))
     }
-
     finalStr
   }
-
-
-
-
-
-
-
-
 }
