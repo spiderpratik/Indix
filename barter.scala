@@ -32,9 +32,100 @@ class barter {
     }
   }
 
-  val DIMENSION = 100 // maximum dimension of the 2D square matrix that represents the graph
-                                          // This 2D matrix is implemented using 1D Array
+  val DIMENSION = 100 // Maximum dimension of the 2D square matrix that represents the graph
+                      // This 2D matrix is implemented using 1D Array
   val INVALID = new fraction(-10, 1)
+  val DELIMITER = "__"
+
+  def parseInputData(input: List[String]): List[String] = {
+    input match{
+      case head::Nil =>
+        val splitString = head.split(" ")
+        if(splitString(0) == "!"){
+          List(splitString(2),splitString(5))
+        }
+        else
+          List("")
+      case head::rest =>
+        val splitString = head.split(" ")
+        if(splitString(0) == "!") {
+          List(splitString(2), splitString(5)) ::: parseInputData(rest)
+        }
+        else
+          List("")
+    }
+  }
+
+  def itemMapIndex(input: List[String]): Map[String,Int] = {
+    val output = parseInputData(input).distinct
+    val index =1 to output.length
+    (output zip index).toMap
+  }
+
+  def indexMapItem(input: List[String]): Map[Int,String] = {
+    itemMapIndex(input).map(_.swap)
+  }
+
+  def generateInfoList(input: List[String]): List[List[String]] = {
+    input match{
+      case a::Nil =>
+        val splitString = a.split(" ")
+        if(splitString(0) == "!"){
+          List(List(splitString(1) ,splitString(2), splitString(4), splitString(5)))
+        }
+        else
+          Nil
+      case a::b =>
+        val splitString = a.split(" ")
+        if(splitString(0) == "!"){
+          List(List(splitString(1) ,splitString(2), splitString(4), splitString(5))) ++ generateInfoList(b)
+        }
+        else
+          Nil ++ generateInfoList(b)
+    }
+  }
+
+  def generateQuestionList(input: List[String]): List[List[String]] = {
+    input match{
+      case head::Nil =>
+        val splitString = head.split(" ")
+        if(splitString(0) == "?"){
+          List(List(splitString(1), splitString(3)))
+        }
+        else
+          Nil
+      case head::rest =>
+        val splitString = head.split(" ")
+        if(splitString(0) == "?"){
+          List(List(splitString(1) ,splitString(3))) ::: generateQuestionList(rest)
+        }
+        else
+          Nil ++ generateQuestionList(rest)
+    }
+  }
+
+  def main(inputList: List[String]): String  = {
+    var matrix: Array[fraction] = new Array[fraction](DIMENSION*DIMENSION)
+    val ItemsToIndex = itemMapIndex(inputList)
+    val IndexToItems = indexMapItem(inputList)
+    val InformationList = generateInfoList(inputList)
+    val QuestionList = generateQuestionList(inputList)
+    for (i <- 1 to InformationList.length)
+      matrix = addNode(matrix, new fraction(InformationList(i - 1)(0).toInt, 1), ItemsToIndex(InformationList(i - 1)(1)), new fraction(InformationList(i - 1)(2).toInt, 1), ItemsToIndex(InformationList(i - 1)(3)))
+    val answer = run(0, QuestionList, IndexToItems, ItemsToIndex, matrix)
+    answer
+  }
+
+  def run(i: Int, QuestionList: List[List[String]], IndexToItems: Map[Int,String], ItemsToIndex: Map[String,Int], mat: Array[fraction]): String = {
+    if (i == QuestionList.length) return ""
+    val start = ItemsToIndex(QuestionList(i)(0))
+    val end = ItemsToIndex(QuestionList(i)(1))
+    val visited = List[Int]()
+    val FinalFraction = graphDFS(start, end, visited, mat, new fraction(1, 1)).simplify()
+    if(FinalFraction.num > 0)
+     DELIMITER + (FinalFraction.num + " " + IndexToItems(start) + " = " + FinalFraction.den + " " + IndexToItems(end)) + run(i+1, QuestionList, IndexToItems, ItemsToIndex, mat)
+    else DELIMITER + ("? " + IndexToItems(start) + " = ? " + IndexToItems(end)) + run(i+1, QuestionList, IndexToItems, ItemsToIndex, mat)
+  }
 
   def addNode(matrix: Array[fraction], f1: fraction, n1: Int, f2: fraction, n2: Int): Array[fraction] = {
     matrix(n1*DIMENSION+n2) = f1.divide(f2)
@@ -42,110 +133,18 @@ class barter {
     matrix
   }
 
-  def graphDFS(from: Int, to: Int, oldVisited: List[Int],matrix: Array[fraction], curr_frac: fraction): fraction = {
-    val visited: List[Int] = oldVisited:::List(from)
-    (from, to) match{
-      case (_,_) if matrix(from*DIMENSION+to) != null =>
-        curr_frac.multiply(matrix(from * DIMENSION + to))
+  def graphDFS(start: Int, end: Int, oldVisited: List[Int],matrix: Array[fraction], curr_frac: fraction): fraction = {
+    val visited: List[Int] = oldVisited:::List(start)
+    (start, end) match{
+      case (_,_) if matrix(start*DIMENSION + end) != null =>
+        curr_frac.multiply(matrix(start*DIMENSION + end))
       case (_,_) =>
-        for(i <- from*DIMENSION to (from+1)*DIMENSION) {
+        for(i <- start*DIMENSION to (start+1)*DIMENSION) {
           if (matrix(i) != null && visited.find(x => x == i%DIMENSION).isEmpty) {
-            return graphDFS(i%DIMENSION, to, visited, matrix, curr_frac.multiply(matrix(i)))
+            return graphDFS(i%DIMENSION, end, visited, matrix, curr_frac.multiply(matrix(i)))
           }
         }
-       INVALID
+        INVALID
     }
-  }
-  def itemMapIndex(input:List[String]):Map[String,Int] ={
-    val output = mainFunction(input).distinct
-    val listindex =1 to output.length
-    (output zip listindex).toMap
-  }
-
-  def indexMapItem(input:List[String]):Map[Int,String] ={
-    val output = mainFunction(input).distinct
-    val listindex =1 to output.length
-    (listindex zip output ).toMap
-  }
-
-  def mainFunction(input:List[String]):List[String] ={
-    input match{
-      case a::Nil =>
-        val tmp = a.split(" ")
-        if(tmp(0) == "!"){
-          List(tmp(2),tmp(5))
-        }
-        else
-          List("")
-      case a::b =>
-        val tmp = a.split(" ")
-        if(tmp(0) == "!") {
-          List(tmp(2),tmp(5)) ++ mainFunction(b)
-        }
-        else
-          List("")
-    }
-  }
-
-  def generateList(input:List[String]):List[List[String]] ={
-    input match{
-      case a::Nil =>
-        val tmp = a.split(" ")
-        if(tmp(0) == "!"){
-          List(List(tmp(1) ,tmp(2), tmp(4), tmp(5)))
-        }
-        else
-          Nil
-      case a::b =>
-        val tmp = a.split(" ")
-        if(tmp(0) == "!"){
-          List(List(tmp(1) ,tmp(2), tmp(4), tmp(5))) ++ generateList(b)
-        }
-        else
-          Nil ++ generateList(b)
-    }
-  }
-
-  def generateQuestionList(input:List[String]):List[List[String]] ={
-    input match{
-      case a::Nil =>
-        val tmp = a.split(" ")
-        if(tmp(0) == "?"){
-          List(List(tmp(1), tmp(3)))
-        }
-        else
-          Nil
-      case a::b =>
-        val tmp = a.split(" ")
-        if(tmp(0) == "?"){
-          List(List(tmp(1) ,tmp(3))) ++ generateQuestionList(b)
-        }
-        else
-          Nil ++ generateQuestionList(b)
-    }
-  }
-
-  def main(inputList: List[String]): String  = {
-    var matrix: Array[fraction] = new Array[fraction](12000)
-    var finalStr = ""
-
-    val mapOfitemsToIndex = itemMapIndex(inputList)
-    val mapOfIndexToItems = indexMapItem(inputList)
-    val informationList = generateList(inputList)
-    val QuestionList = generateQuestionList(inputList)
-    for(i <- 1 to informationList.length)
-      matrix = addNode(matrix, new fraction(informationList(i-1)(0).toInt ,1), mapOfitemsToIndex(informationList(i-1)(1)),new fraction(informationList(i-1)(2).toInt,1), mapOfitemsToIndex(informationList(i-1)(3)))
-
-    for( i <- 0 to QuestionList.length-1) {
-      val from = mapOfitemsToIndex(QuestionList(i)(0))
-      val to = mapOfitemsToIndex(QuestionList(i)(1))
-      val visited = List[Int]()
-      val final_frac_not_simplified = graphDFS(from, to, visited, matrix, new fraction(1, 1))
-      val final_frac = final_frac_not_simplified.simplify()
-      if(final_frac.num > 0)
-       finalStr  = finalStr + "__" + (final_frac.num + " " + mapOfIndexToItems(from) + " = " + final_frac.den + " " + mapOfIndexToItems(to))
-      else finalStr = finalStr + "__" + ("? " + mapOfIndexToItems(from) + " = ? " + mapOfIndexToItems(to))
-    }
-    finalStr
   }
 }
